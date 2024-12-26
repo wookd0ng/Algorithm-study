@@ -1,0 +1,408 @@
+	1.	등록(추가) → POST
+	•	URL: /api/users/
+	2.	조회(전체) → GET
+	•	URL: /api/users
+	3.	조회(특정) → GET
+	•	URL: /api/users/{id}
+	4.	수정 → PUT
+	•	URL: /api/users
+	5.	조건부 조회 → GET
+	•	URL: /api/orders?status=PENDING
+
+	괄호 안의 값이 여러개면
+	{
+      "userId": 1,
+      "cartItems": [
+        { "menuId": 10, "quantity": 2 },
+        { "menuId": 15, "quantity": 1 }
+      ]
+    }
+
+	사용자 정보 관리 Controller
+	import org.springframework.hateoas.EntityModel;
+    import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.*;
+
+    import java.util.HashMap;
+    import java.util.Map;
+
+    @RestController
+    @RequestMapping("/api/users")
+    public class UserController {
+
+        // 1. 사용자 등록
+        @PostMapping
+        public ResponseEntity<EntityModel<Map<String, Object>>> registerUser() {
+            // 하드코딩된 사용자 데이터
+            Map<String, Object> user = new HashMap<>();
+            user.put("id", 1);
+            user.put("username", "john_doe");
+            user.put("email", "john@example.com");
+
+            // HATEOAS 링크 추가
+            EntityModel<Map<String, Object>> resource = EntityModel.of(user);
+            resource.add(WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(UserController.class).getUserById(1)).withRel("get-user"));
+
+            return ResponseEntity.ok(resource);
+        }
+
+        // 2. 사용자 조회
+        @GetMapping("/{id}")
+        public ResponseEntity<EntityModel<Map<String, Object>>> getUserById(@PathVariable int id) {
+            // 하드코딩된 사용자 데이터
+            Map<String, Object> user = new HashMap<>();
+            user.put("id", id);
+            user.put("username", "john_doe");
+            user.put("email", "john@example.com");
+
+            // HATEOAS 링크 추가
+            EntityModel<Map<String, Object>> resource = EntityModel.of(user);
+            resource.add(WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(UserController.class).registerUser()).withRel("register-user"));
+
+            return ResponseEntity.ok(resource);
+        }
+
+        // 3. 사용자 수정
+        @PutMapping("/{id}")
+        public ResponseEntity<EntityModel<Map<String, Object>>> updateUser(@PathVariable int id, @RequestBody Map<String, String> updateData) {
+            // 업데이트 후 하드코딩된 데이터 반환
+            Map<String, Object> updatedUser = new HashMap<>();
+            updatedUser.put("id", id);
+            updatedUser.put("username", updateData.get("username"));
+            updatedUser.put("email", updateData.get("email"));
+
+            // HATEOAS 링크 추가
+            EntityModel<Map<String, Object>> resource = EntityModel.of(updatedUser);
+            resource.add(WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(UserController.class).getUserById(id)).withSelfRel());
+
+            return ResponseEntity.ok(resource);
+        }
+    }
+
+주문 관리 Controller
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/orders")
+public class OrderController {
+
+    // 1. 주문 생성
+    @PostMapping
+    public ResponseEntity<EntityModel<Map<String, Object>>> createOrder() {
+        // 하드코딩된 주문 데이터
+        Map<String, Object> order = new HashMap<>();
+        order.put("id", 101);
+        order.put("status", "PENDING");
+        order.put("totalPrice", 2000);
+
+        // HATEOAS 링크 추가
+        EntityModel<Map<String, Object>> resource = EntityModel.of(order);
+        resource.add(WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(OrderController.class).getOrderById(101)).withRel("get-order"));
+
+        return ResponseEntity.ok(resource);
+    }
+
+    // 2. 특정 주문 조회
+    @GetMapping("/{id}")
+    public ResponseEntity<EntityModel<Map<String, Object>>> getOrderById(@PathVariable int id) {
+        // 하드코딩된 주문 데이터
+        Map<String, Object> order = new HashMap<>();
+        order.put("id", id);
+        order.put("status", "PENDING");
+        order.put("totalPrice", 2000);
+
+        // HATEOAS 링크 추가
+        EntityModel<Map<String, Object>> resource = EntityModel.of(order);
+        resource.add(WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(OrderController.class).createOrder()).withRel("create-order"));
+
+        return ResponseEntity.ok(resource);
+    }
+
+    // 3. 조건부 주문 조회
+    @GetMapping
+    public ResponseEntity<List<Map<String, Object>>> getOrdersByStatus(@RequestParam String status) {
+        // 하드코딩된 주문 목록
+        Map<String, Object> order1 = new HashMap<>();
+        order1.put("id", 101);
+        order1.put("status", status);
+        order1.put("totalPrice", 2000);
+
+        Map<String, Object> order2 = new HashMap<>();
+        order2.put("id", 102);
+        order2.put("status", status);
+        order2.put("totalPrice", 1500);
+
+        return ResponseEntity.ok(List.of(order1, order2));
+    }
+}
+
+-> status 안에 PENDING 이라는게 저장됨.
+-> 마지막에 return ResponseEntity.ok(List.of(order1, order2)); 이거 하는 이유가 HATEOAS로 값 저장한걸 반환값으로 줘서
+테스트가 잘 진행되는지 확인하기 위함
+
+//BEAN
+### 01. 사장과 직원의 스코프 설정
+
+1. `User` 클래스를 만들고, 이를 상속받는 `Boss`와 `Employee` 클래스를 각각 작성하세요.
+    - `Boss` 클래스는 "사장님" 역할을 하고, `Employee` 클래스는 "직원" 역할을 수행
+2. Bean 스코프 설정:
+    - `Boss`는 애플리케이션 내에서 단 하나의 인스턴스만 존재하도록 스코프를 설정
+    - `Employee`는 매번 새로운 인스턴스가 생성되도록 스코프를 설정
+3. 스프링 컨텍스트에서 `Boss`와 `Employee` 빈을 각각 두 번 요청하고, 각 빈의 인스턴스가 같은지 또는 다른지 확인하여 스코프의 차이를 확인하세요.
+
+public class User {
+    private String name;
+
+    // 생성자와 Getter/Setter
+}
+
+@Component
+@Scope("singleton") // 싱글톤 스코프 설정
+public class Boss extends User {
+    // 추가적인 Boss 관련 로직 작성 가능
+}
+
+@Component
+@Scope("prototype") // 프로토타입 스코프 설정
+public class Employee extends User {
+    // 추가적인 Employee 관련 로직 작성 가능
+}
+
+//### 02. 회사 문 열기/닫기
+
+  1. `Company` 클래스를 작성하여 회사 운영과 관련된 기능을 구현하세요.
+      - `openDoor` 메소드: 회사 문을 열고 "회사 문이 열렸습니다." 메시지를 출력
+      - `closeDoor` 메소드: 회사 문을 닫고 "회사 문이 닫혔습니다." 메시지를 출력
+  2. Java Configuration을 통해 `Company` 빈을 등록할 때, initMethod와 destroyMethod 설정하세요.
+  3. 애플리케이션 실행 시 스프링 컨텍스트가 초기화될 때 회사 문이 열리고, 종료될 때 회사 문이 닫히는지 확인하세요.
+
+public class Company {
+    public void openDoor() {
+        System.out.println("회사 문이 열렸습니다.");
+    }
+
+    public void closeDoor() {
+        System.out.println("회사 문이 닫혔습니다.");
+    }
+}
+
+@Configuration
+public class CompanyConfig {
+    @Bean(initMethod = "openDoor", destroyMethod = "closeDoor")
+    public Company company() {
+        return new Company();
+    }
+}
+
+### 03. 주문 프로세스
+
+1. `OrderProcessor` 클래스를 작성하여 온라인 쇼핑몰에서 주문을 처리하는 기능을 구현하세요.
+    - `startOrder` 메소드: "주문 프로세스를 시작합니다." 메시지를 출력
+    - `completeOrder` 메소드: "주문 프로세스가 완료되었습니다." 메시지를 출력
+2. 스코프와 라이프사이클 메소드 설정:
+    - `OrderProcessor` 의 스코프를 각 주문마다 새로운 `OrderProcessor` 인스턴스가 생성되도록 설정
+    - `OrderProcessor` 에 어노테이션을 이용하여 init, destroy 메서드 지정
+3. 여러 번의 주문 요청을 생성하여 주문마다 새로운 `OrderProcessor` 인스턴스가 생성되는지, 그리고 각 인스턴스에 대해 주문 시작과 종료 메시지가 올바르게 출력되는지 확인하세요.
+
+@Component
+@Scope("prototype") // 프로토타입 스코프
+public class OrderProcessor {
+
+    @PostConstruct
+    public void startOrder() {
+        System.out.println("주문 프로세스를 시작합니다.");
+    }
+
+    @PreDestroy
+    public void completeOrder() {
+        System.out.println("주문 프로세스가 완료되었습니다.");
+    }
+}
+
+### 04. 겨울 간식 정보 주입
+
+1. `application.properties` 파일을 생성하고, `snack.name`, `snack.price` 키를 사용하여 겨울 간식의 이름과 가격 정보를 정의하세요.
+2. 겨울 간식 정보 주입:
+    - `WinterSnack` 클래스를 작성하고 `snack.name`과 `snack.price` 값을 각각 `name`과 `price` 필드에 주입
+3. `WinterSnack` 클래스에서 주입된 간식 이름과 가격 정보를 출력하는 `printSnackInfo` 메소드를 작성하세요.
+    - 이 메소드가 실행될 때 "간식 이름: 붕어빵, 가격: 500원"과 같이 주입된 정보 출력
+
+    @Component
+    public class WinterSnack {
+        @Value("${snack.name}")
+        private String name;
+
+        @Value("${snack.price}")
+        private int price;
+
+        public void printSnackInfo() {
+            System.out.println("간식 이름: " + name + ", 가격: " + price + "원");
+        }
+    }
+
+    snack.name=붕어빵
+    snack.price=500
+
+
+### 05. 음악 추천 서비스 설정
+
+1. `application.properties` 파일에 다음과 같은 음악 알림 설정값을 정의하세요.
+    - `music.title`: 추천할 노래 제목 (예: Hypeboy)
+    - `music.artist`: 노래 가수 (예: 뉴진스)
+    - `music.message`: 추천 메시지 내용 (예: 홍대 어떻게 가는지 아세요?)
+2. MusicRecommendationService 클래스 작성:
+    - `MusicRecommendationService` 클래스를 작성하여 `title`, `artist`, `message` 필드를 정의하고, 각각 `@Value` 어노테이션을 통해 properties 파일에 정의된 설정값을 주입받으세요.
+3. `MusicRecommendationService` 클래스에 `recommendMusic` 메소드를 작성하여 "홍대 어떻게 가는지 아세요? 뉴진스의 Hypeboy"와 같은 형식으로 주입된 값들이 출력되도록 설정하세요.
+
+music.title=Hypeboy
+music.artist=뉴진스
+music.message=홍대 어떻게 가는지 아세요?
+
+@Component
+public class MusicRecommendationService {
+    @Value("${music.title}")
+    private String title;
+
+    @Value("${music.artist}")
+    private String artist;
+
+    @Value("${music.message}")
+    private String message;
+
+    public void recommendMusic() {
+        System.out.println(message + " " + artist + "의 " + title);
+    }
+}
+
+Thymeleaf
+
+controller
+@Controller
+public class UserController {
+
+    @GetMapping("/user/profile")
+    public String userProfile(Model model) {
+        model.addAttribute("name", "홍길동");
+        model.addAttribute("email", "hong@example.com");
+        model.addAttribute("joinDate", LocalDate.of(2023, 1, 15));
+        return "profile";
+    }
+}
+
+html
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>회원 프로필</title>
+</head>
+<body>
+    <h1>회원 정보</h1>
+    <p>이름: <span th:text="${name}"></span></p>
+    <p>이메일: <span th:text="${email}"></span></p>
+    <p>가입 날짜: <span th:text="${joinDate}"></span></p>
+</body>
+</html>
+
+리다이렉트
+@Controller
+public class TodoController {
+
+    private List<String> todos = new ArrayList<>();
+
+    @GetMapping("/todos")
+    public String showTodos(Model model) {
+        model.addAttribute("todos", todos);
+        return "todos";
+    }
+
+    @PostMapping("/todos/add")
+    public String addTodo(@RequestParam("task") String task) {
+        todos.add(task);
+        return "redirect:/todos";
+    }
+
+    @PostMapping("/todos/delete")
+    public String deleteTodo(@RequestParam("index") int index) {
+        if (index >= 0 && index < todos.size()) {
+            todos.remove(index);
+        }
+        return "redirect:/todos";
+    }
+}
+
+Reflection
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+
+public class ReflectionDemo {
+    public static void main(String[] args) {
+        try {
+            // Product 클래스의 Class 객체 가져오기
+            Class<?> clazz = Product.class;
+
+            // 필드 정보 출력
+            System.out.println("=== 필드 정보 ===");
+            for (Field field : clazz.getDeclaredFields()) {
+                System.out.println("필드 이름: " + field.getName() + ", 데이터 타입: " + field.getType().getName());
+            }
+
+            // 메서드 정보 출력
+            System.out.println("\n=== 메서드 정보 ===");
+            for (Method method : clazz.getDeclaredMethods()) {
+                System.out.println("메서드 이름: " + method.getName() + ", 반환 타입: " + method.getReturnType().getName());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+### 02. Private 필드와 메소드 접근
+
+1. `User` 클래스를 작성하고, private 필드 `username`과 private 메소드 `getUsername()`을 선언한다.
+2. Reflection을 사용하여 `User` 클래스의 `username` 필드에 값을 할당하고, `getUsername()` 메소드를 호출하여 값을 가져오는 코드를 작성한다.
+    - [힌트] `setAccessible(true)`  메소드를 활용하면 private한 값에도 접근하도록 설정을 변경할 수 있다.
+3. 2에서 읽어온 값과 함께, Reflection을 통해 private 필드와 메소드에 접근할 때 주의할 점을 함께 출력한다.
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+
+public class PrivateAccessDemo {
+    public static void main(String[] args) {
+        try {
+            // User 클래스의 인스턴스 생성
+            User user = new User();
+
+            // username 필드에 값 할당
+            Field field = User.class.getDeclaredField("username");
+            field.setAccessible(true); // 접근 제한 해제
+            field.set(user, "홍길동");
+
+            // getUsername 메서드 호출
+            Method method = User.class.getDeclaredMethod("getUsername");
+            method.setAccessible(true); // 접근 제한 해제
+            String username = (String) method.invoke(user);
+
+            System.out.println("username 필드 값: " + username);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+특정고객의 모든 주문 조회
+public interface orderrepository extends jpaRepository<Order, Long>
+@Query("select o from order o where o.customer.id =:customerID")
+List<order> findAllByCustomerId(Long CustomerId);
+
+Page<Order> findAllByOrderByOrderDate(Pageable pageable)
+
